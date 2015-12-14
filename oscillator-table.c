@@ -42,21 +42,21 @@
 typedef void (*write_to_buffer_func_t)(void *out, uint16_t frame, uint8_t channels,
 				       uint8_t channel, int16_t value);
 
-inline void write_s16_to_s8(void *out, uint16_t frame, uint8_t channels,
+static inline void write_s16_to_s8(void *out, uint16_t frame, uint8_t channels,
 				       uint8_t channel, int16_t value)
 {
 	int8_t *dest = out;
 	dest[frame * channels + channel] = value >> 8;
 }
 
-inline void write_s16_to_s16(void *out, uint16_t frame, uint8_t channels,
+static inline void write_s16_to_s16(void *out, uint16_t frame, uint8_t channels,
 				       uint8_t channel, int16_t value)
 {
 	int16_t *dest = out;
 	dest[frame * channels + channel] = value;
 }
 
-inline void write_s16_to_s24(void *out, uint16_t frame, uint8_t channels,
+static inline void write_s16_to_s24(void *out, uint16_t frame, uint8_t channels,
 				       uint8_t channel, int16_t value)
 {
 	union s24_t {
@@ -78,7 +78,7 @@ inline void write_s16_to_s24(void *out, uint16_t frame, uint8_t channels,
 	d[2] = val.c[2];
 }
 
-inline void write_s16_to_s32(void *out, uint16_t frame, uint8_t channels,
+static inline void write_s16_to_s32(void *out, uint16_t frame, uint8_t channels,
 				       uint8_t channel, int16_t value)
 {
 	int32_t *dest = out;
