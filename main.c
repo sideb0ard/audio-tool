@@ -40,15 +40,16 @@
 #include <string.h>
 #include <libgen.h>
 
-#include "tinyplay.h"
+#include "config_cmd.h"
+#include "defaults.h"
+#include "loopback.h"
+#include "pulse-generator.h"
+#include "restore.h"
+#include "save.h"
 #include "tinycap.h"
 #include "tinymix.h"
-#include "pulse-generator.h"
+#include "tinyplay.h"
 #include "tone-generator.h"
-#include "save.h"
-#include "restore.h"
-#include "defaults.h"
-#include "config_cmd.h"
 
 /* defined in config.c */
 int parse_args(struct audio_tool_config *config, int *argc, char ***argv);
@@ -93,6 +94,8 @@ int main(int argc, char* argv[])
 			ret = pulse_generator_main(&config, argc, argv);
 		} else if (strcmp(argv[0], "tone") == 0) {
 			ret = tone_generator_main(&config, argc, argv);
+		} else if (strcmp(argv[0], "loopback") == 0) {
+			ret = loopback_main(&config);
 		} else if (strcmp(argv[0], "save") == 0) {
 			ret = save_main(&config, argc, argv);
 		} else if (strcmp(argv[0], "restore") == 0) {

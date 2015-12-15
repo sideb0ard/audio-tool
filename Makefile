@@ -33,7 +33,7 @@ TARGETCFLAGS := $(TARGETLINKOPTS) $(CFLAGS) \
 	-DVERSION=$(VERSION) \
 
 TARGETLDFLAGS :=
-TARGETLDLIBS := $(LIB) -lm -lrt
+TARGETLDLIBS := $(LIB) -lm -lrt -lpthread
 
 TARGETS := $(LIB) \
 	audio-tool \
@@ -42,6 +42,7 @@ LIB_OBJECTS = \
 	tinyplay.o \
 	tinycap.o \
 	tinymix.o \
+	loopback.o \
 	mixer.o \
 	pcm.o \
 	pulse-generator.o \

@@ -171,6 +171,12 @@ int tone_generator_main(const struct audio_tool_config *at_config, int argc, cha
 		.device = 0,
 		.chan_mask = ~0,
 	};
+    int i;
+    for ( i = 0; i < argc; i++) {
+        printf("ARGV %d :: %s\n", i, argv[i]);
+    }
+    printf("DUration : %d\n", at_config->duration);
+
 	struct pcm_config pcm_config;
 	struct wave_table *ptr, *table;
 	struct wave_scale wave_scale;
