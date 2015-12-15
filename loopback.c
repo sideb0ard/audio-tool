@@ -21,17 +21,33 @@
 
 #include "config.h"
 #include "loopback.h"
+#include "tinycap.h"
 #include "tone-generator.h"
 
 void *tone_play(void *config)
 {
+    printf("In Play thread...\n");
     struct audio_tool_config *conf = (struct audio_tool_config *) config;
-    int t_argc = 3;
-    char *t_argv[] = { "tone", "sine", "440" };
+    int argc = 3;
+    char *argv[] = { "tone", "sine", "440" };
     conf->duration = 2;
 
-    printf("Thread DUration : %d\nCalling tone_gen...\n", conf->duration);
-    tone_generator_main(config, t_argc, t_argv);
+    //ret = tone_generator_main(config, t_argc, t_argv);
+    tone_generator_main(conf, argc, argv);
+
+    return NULL;
+}
+
+void *tone_capture(void *config)
+{
+    printf("In Capture thread...\n");
+    struct audio_tool_config *conf = (struct audio_tool_config *) config;
+    int argc = 2;
+    char *argv[] = { "capture", "blah.wav" };
+    conf->duration = 2;
+
+    //ret = tinycap_main(&config, argc, argv, tinycap);
+    tinycap_main(conf, argc, argv, 0);
 
     return NULL;
 }
@@ -39,19 +55,30 @@ void *tone_play(void *config)
 int loopback_main(struct audio_tool_config *config)
 {
     printf("Yarly! Loopback audio testin'...\n");
-    pthread_t tplay_thread;
+    pthread_t play_thread;
+    pthread_t record_thread;
 
-    if (pthread_create(&tplay_thread, NULL, tone_play, config)) {
-        fprintf(stderr, "Errrr creating thread..\n");
+    // play
+    if (pthread_create(&play_thread, NULL, tone_play, config)) {
+        fprintf(stderr, "Errrr creating PLAY thread..\n");
+        return 1;
+    }
+    // record
+    if (pthread_create(&record_thread, NULL, tone_capture, config)) {
+        fprintf(stderr, "Errrr creating RECORD thread..\n");
         return 1;
     }
 
-    if (pthread_join(tplay_thread, NULL)) {
-        fprintf(stderr, "Errrr joining thread..\n");
+    if (pthread_join(play_thread, NULL)) {
+        fprintf(stderr, "Errrr joining PLAY thread..\n");
+        return 2;
+    }
+    if (pthread_join(record_thread, NULL)) {
+        fprintf(stderr, "Errrr joining RECORD thread..\n");
         return 2;
     }
 
-    printf("\nBOOM! thread finished\n\n");
+    printf("\nBOOM! threads finished\n\n");
 
 	return 0;
 }
