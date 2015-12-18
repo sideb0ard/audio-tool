@@ -110,7 +110,11 @@ int mixer_cache_populate(struct audio_tool_mixer_cache *cache, struct mixer *mix
 			case MIXER_CTL_TYPE_ENUM:
 				tmp = mixer_ctl_get_value(ctl, v);
 				name = mixer_ctl_get_enum_string(ctl, tmp);
-				strcpy(cur->value.enumerated[v], name);
+        // null value names were causing seg fault here
+        if (name) 
+				  strcpy(cur->value.enumerated[v], name);
+				else
+					printf("Skipping ENUM due to null setting for %s\n", cur->name);
 				break;
 			case MIXER_CTL_TYPE_BYTE:
 				cur->value.byte[v] = mixer_ctl_get_value(ctl, v);

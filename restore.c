@@ -196,6 +196,7 @@ int restore_main(const struct audio_tool_config *config, int argc, char **argv)
 		printf("Could not initialize mixer cache\n");
 		return 1;
 	}
+
 	if (mixer_cache_populate(&db, mixer)) {
 		printf("Could not populate mixer cache\n");
 		return 1;
