@@ -33,7 +33,7 @@ TARGETCFLAGS := $(TARGETLINKOPTS) $(CFLAGS) \
 	-DVERSION=$(VERSION) \
 
 TARGETLDFLAGS :=
-TARGETLDLIBS := $(LIB) -lm -lrt -lpthread
+TARGETLDLIBS := $(LIB) -lm -lrt -lpthread -lexpat
 
 TARGETS := $(LIB) \
 	audio-tool \
@@ -55,6 +55,7 @@ LIB_OBJECTS = \
 	defaults.o \
 	alsa-control.o \
 	config_cmd.o \
+	xparse.o \
 
 MODULES = \
 	card-omap-abe.o \
@@ -77,6 +78,9 @@ tinymix: tinymix.o $(LIB)
 
 pulse-generator: pulse-generator.o $(LIB)
 	$(TARGETCC) $(TARGETCFLAGS) $(TARGETLDFLAGS) -o $@ $^ $(TARGETLDLIBS)
+
+#xparse: xparse.o
+#	$(TARGETCC) $(TARGETCFLAGS) $(TARGETLDFLAGS) -o $@ $^ $(TARGETLDLIBS)
 
 $(LIB): $(LIB_OBJECTS)
 	$(TARGETAR) rc $@ $^

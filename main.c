@@ -57,6 +57,12 @@ void usage(void);
 
 int main(int argc, char* argv[])
 {
+
+	if (argc == 1) {
+		usage();
+		return 0;
+	}
+
 	struct audio_tool_config config;
 	int ret;
 	int tinyplay = 0, tinycap = 0, tinymix = 0;
@@ -104,6 +110,8 @@ int main(int argc, char* argv[])
 			ret = defaults_main(&config, argc, argv);
 		} else if (strcmp(argv[0], "config") == 0) {
 			ret = config_cmd_main(&config, argc, argv);
+		} else if (strcmp(argv[0], "xparse") == 0) {
+			ret = xparse_main();
 		} else {
 			usage();
 			ret = 1;
