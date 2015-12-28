@@ -10,12 +10,41 @@ struct mixer_setting {
     XML_Char *id;
 };
 
+struct use_case {
+    XML_Char *name;
+    struct mixer_setting *mixer_settings[20];
+    int num_mixer_settings;
+};
+
 struct config_parse_state {
 	XML_Char last_content[BUFFER_SIZE];
-    struct mixer_setting *initial_mixer_settings[10];
-    int num_mixer_settings;
+    struct use_case *use_cases[10];
+    int num_use_cases;
 	int level;
 };
+
+struct mixer_setting * new_mixer_setting() {
+    struct mixer_setting *ms = malloc(sizeof(struct mixer_setting));
+    ms->name = malloc(sizeof(XML_Char)*50);
+    ms->value = malloc(sizeof(XML_Char)*50);
+    ms->id = malloc(sizeof(XML_Char)*50);
+    return ms;
+}
+
+struct use_case * get_use_case(struct config_parse_state *state) {
+    for (int i = 0; i < state->num_use_cases; i++) {
+        if (!strcmp(state->last_content, state->use_cases[i]->name)) {
+            return state->use_cases[i];
+        }
+    }
+    struct use_case *uc = malloc(sizeof(struct use_case));
+    uc->name = malloc(sizeof(XML_Char)*50);
+    strncpy(uc->name, state->last_content, 50);
+    state->use_cases[state->num_use_cases] = uc;
+    state->num_use_cases++;
+    return uc;
+}
+    
 
 void start_tag(void *data, const XML_Char *tag_name, const XML_Char **attr)
 {
@@ -33,55 +62,28 @@ void start_tag(void *data, const XML_Char *tag_name, const XML_Char **attr)
 			attr_value = attr[i + 1];
 	}
 
-	if(state->level ==1) {
-		if (!strcmp(tag_name, "ctl")) {
-			printf("INITIAL MIXER SETTING:: %s : %s\n", attr_name, attr_value);
-            struct mixer_setting *ms = malloc(sizeof(struct mixer_setting));
-            ms->name = malloc(sizeof(XML_Char)*50);
-            strncpy(ms->name, attr_name, 50);
-            ms->value = malloc(sizeof(XML_Char)*50);
-            strncpy(ms->value, attr_value, 50);
-            ms->id = malloc(sizeof(XML_Char)*50);
-            strncpy(ms->id, attr_id, 50);
-            state->initial_mixer_settings[state->num_mixer_settings] = ms;
-            state->num_mixer_settings++;
+    if (state->level == 0) {
+		strcpy(state->last_content, "initial-settings");
+	} else if (state->level ==1 && !strcmp(tag_name, "path")) {
+		strcpy(state->last_content, attr_name);
+    }
 
-		//} else if (!strcmp(tag_name, "path")) {
-		//	printf("USECASE:: %s\n", attr_name);
-		}
-	} else if (state->level == 2) {
-		printf("USE CASE:: %s\n", state->last_content);
-		printf("Level: %d // Tag: %s // Attr_name: %s // Attr_val: %s\n", state->level, tag_name, attr_name, attr_value);
+	if (!strcmp(tag_name, "ctl")) {
+        struct use_case *uc = get_use_case(state);
+        //struct mixer_setting *ms = new_mixer_setting();
+        //strncpy(ms->name, attr_name, 50);
+        //strncpy(ms->value, attr_value, 50);
+        //strncpy(ms->id, attr_id, 50);
+        //uc->mixer_settings[uc->num_mixer_settings] = ms;
+        //uc->num_mixer_settings++;
 	}
 
-	//if (strcmp(tag_name, "path") == 0) {
-	//	if (attr_name == NULL) {
-	//		printf("Barf! unnamed path.\n");
-	//	} else {
-	//		if (state->level == 1) {
-	//			printf("PATH %s\n", attr_name);
-	//			//printf("TOP LEVEL!\n");
-	//		} else {
-	//			printf("NOT LEVEL 1 PATH %s\n", attr_name);
-	//		}
-	//	}
-	//} else if (strcmp(tag_name, "ctl") == 0) {
-	//	printf("CTL %s\n", attr_name);
-	//}
-
-	if (state->level == 1 && attr_name)
-		strcpy(state->last_content, attr_name);
 	state->level++;
 }
 
 void end_tag(void *data, const XML_Char *el)
 {
 	struct config_parse_state *state = data;
-	//int i;
-	//for ( i = 0; i < state->level; i++)
-	//	printf(" ");
-
-	//printf("Content of element %s was \"%s\"\n", el, last_content);
 	state->level--;
 }
 		
@@ -128,10 +130,15 @@ int xparse_main(int argc, char **argv)
 	fclose(fp);
 	XML_ParserFree(parser);
 
-    printf("INITSZZZ:: %d\n", state.num_mixer_settings);
-    for ( int i = 0; i < state.num_mixer_settings; i++) {
-        struct mixer_setting *ms = state.initial_mixer_settings[i];
-        printf("INIT:: name: %s id: %s val: %s\n", ms->name, ms->id, ms->value);
+    //printf("INITSZZZ:: %d\n", state.num_mixer_settings);
+    //for ( int i = 0; i < state.num_mixer_settings; i++) {
+    //    struct mixer_setting *ms = state.initial_mixer_settings[i];
+    //    printf("INIT:: name: %s id: %s val: %s\n", ms->name, ms->id, ms->value);
+    //}
+    printf("USE CASES:: %d\n", state.num_use_cases);
+    for ( int i = 0; i < state.num_use_cases; i++) {
+        struct use_case *uc = state.use_cases[i];
+        printf("USE CASE:: name: %s\n", uc->name);
     }
 
 
