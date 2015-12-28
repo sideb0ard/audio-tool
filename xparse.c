@@ -4,11 +4,18 @@
 
 #define BUFFER_SIZE 100000
 
-struct config_parse_state {
-	XML_Char last_content[BUFFER_SIZE];
-	int level;
+struct mixer_setting {
+    XML_Char *name;
+    XML_Char *value;
+    XML_Char *id;
 };
 
+struct config_parse_state {
+	XML_Char last_content[BUFFER_SIZE];
+    struct mixer_setting *initial_mixer_settings[10];
+    int num_mixer_settings;
+	int level;
+};
 
 void start_tag(void *data, const XML_Char *tag_name, const XML_Char **attr)
 {
@@ -16,10 +23,8 @@ void start_tag(void *data, const XML_Char *tag_name, const XML_Char **attr)
 	const XML_Char *attr_id    = NULL;
 	const XML_Char *attr_value = NULL;
 	struct config_parse_state *state = data;
-	unsigned int i;
-	printf("\n");
 
-	for ( i = 0; attr[i]; i += 2) {
+	for ( int i = 0; attr[i]; i += 2) {
 		if (strcmp(attr[i], "name") == 0)
 			attr_name = attr[i + 1];
 		if (strcmp(attr[i], "id") == 0)
@@ -31,10 +36,20 @@ void start_tag(void *data, const XML_Char *tag_name, const XML_Char **attr)
 	if(state->level ==1) {
 		if (!strcmp(tag_name, "ctl")) {
 			printf("INITIAL MIXER SETTING:: %s : %s\n", attr_name, attr_value);
-		} else if (!strcmp(tag_name, "path")) {
-			printf("USECASE:: %s\n", attr_name);
+            struct mixer_setting *ms = malloc(sizeof(struct mixer_setting));
+            ms->name = malloc(sizeof(XML_Char)*50);
+            strncpy(ms->name, attr_name, 50);
+            ms->value = malloc(sizeof(XML_Char)*50);
+            strncpy(ms->value, attr_value, 50);
+            ms->id = malloc(sizeof(XML_Char)*50);
+            strncpy(ms->id, attr_id, 50);
+            state->initial_mixer_settings[state->num_mixer_settings] = ms;
+            state->num_mixer_settings++;
+
+		//} else if (!strcmp(tag_name, "path")) {
+		//	printf("USECASE:: %s\n", attr_name);
 		}
-	} else {
+	} else if (state->level == 2) {
 		printf("USE CASE:: %s\n", state->last_content);
 		printf("Level: %d // Tag: %s // Attr_name: %s // Attr_val: %s\n", state->level, tag_name, attr_name, attr_value);
 	}
@@ -94,17 +109,16 @@ int xparse_main(int argc, char **argv)
 
 	XML_SetUserData(parser, &state);
 	XML_SetElementHandler(parser, start_tag, end_tag);
-	// XML_SetCharacterDataHandler(parser, handle_data);
 
 	char buffer[BUFFER_SIZE + 1];
 	memset(buffer, 0, BUFFER_SIZE);
-	printf("Strlen(buffer) before parsing: %zu\n", strlen(buffer));
-	printf("Buffer size is : %d\n", BUFFER_SIZE);
 
 	size_t items_num = 0;
 	items_num = fread(&buffer, sizeof(char), BUFFER_SIZE, fp);
-	printf("Read %zu items\n", items_num);
-	printf("Strlen(buffer) after parsing: %zu\n", strlen(buffer));
+    if (items_num == 0) {
+        printf("(okay) no items read.\n");
+        return -1;
+    }
 	
 	if (XML_Parse(parser, buffer, strlen(buffer), XML_TRUE) == XML_STATUS_ERROR) {
 		printf("Errrr! %s\n", XML_ErrorString(XML_GetErrorCode(parser)));
@@ -114,7 +128,13 @@ int xparse_main(int argc, char **argv)
 	fclose(fp);
 	XML_ParserFree(parser);
 
+    printf("INITSZZZ:: %d\n", state.num_mixer_settings);
+    for ( int i = 0; i < state.num_mixer_settings; i++) {
+        struct mixer_setting *ms = state.initial_mixer_settings[i];
+        printf("INIT:: name: %s id: %s val: %s\n", ms->name, ms->id, ms->value);
+    }
+
+
 	return 0;
 
 }
-	
