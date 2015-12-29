@@ -3,6 +3,11 @@
 #include <string.h>
 
 #define BUFFER_SIZE 100000
+#define ARRAY_SIZE 40000000
+
+// CONFIG_PARSE_STATE is passed bewteen functions to maintain
+// a state. It contains an array of 'use_case's, which contain
+// an array of 'mixer_setting's
 
 struct mixer_setting {
     XML_Char *name;
@@ -12,16 +17,19 @@ struct mixer_setting {
 
 struct use_case {
     XML_Char *name;
-    struct mixer_setting *mixer_settings[20];
+    struct mixer_setting *mixer_settings;
     int num_mixer_settings;
+    int mixer_array_size;
 };
 
 struct config_parse_state {
 	XML_Char last_content[BUFFER_SIZE];
-    struct use_case *use_cases[10];
+    struct use_case *use_cases[10000];
     int num_use_cases;
 	int level;
 };
+
+// functions to generate new 'mixer_setting' and 'use_case'
 
 struct mixer_setting * new_mixer_setting() {
     struct mixer_setting *ms = malloc(sizeof(struct mixer_setting));
@@ -40,12 +48,17 @@ struct use_case * get_use_case(struct config_parse_state *state) {
     struct use_case *uc = malloc(sizeof(struct use_case));
     uc->name = malloc(sizeof(XML_Char)*50);
     strncpy(uc->name, state->last_content, 50);
+    // 
+    uc->mixer_array_size = ARRAY_SIZE;
+    uc->mixer_settings = malloc(sizeof(struct mixer_setting*) * uc->mixer_array_size);
+    printf("INIT MIXER ARRAY SIZE: %d\n", uc->mixer_array_size);
+    // 
     state->use_cases[state->num_use_cases] = uc;
     state->num_use_cases++;
     return uc;
 }
-    
 
+// functions used by Expat 
 void start_tag(void *data, const XML_Char *tag_name, const XML_Char **attr)
 {
 	const XML_Char *attr_name  = NULL;
@@ -69,7 +82,9 @@ void start_tag(void *data, const XML_Char *tag_name, const XML_Char **attr)
     }
 
 	if (!strcmp(tag_name, "ctl")) {
+
         struct use_case *uc = get_use_case(state);
+
         struct mixer_setting *ms = new_mixer_setting();
         if (attr_name)
             strncpy(ms->name, attr_name, 50);
@@ -77,8 +92,23 @@ void start_tag(void *data, const XML_Char *tag_name, const XML_Char **attr)
             strncpy(ms->value, attr_value, 50);
         if (attr_id)
             strncpy(ms->id, attr_id, 50);
-        uc->mixer_settings[uc->num_mixer_settings] = ms;
+
+        printf("ADDING SETTING - %d - %d\n", uc->num_mixer_settings, uc->mixer_array_size);
+        uc->mixer_settings[uc->num_mixer_settings] = *ms;
         uc->num_mixer_settings++;
+
+        //if (uc->num_mixer_settings >= uc->mixer_array_size) {
+        if (uc->mixer_array_size <= uc->num_mixer_settings) {
+            printf("RESIZING!\n");
+            uc->mixer_array_size *= 2;
+            struct mixer_setting *tmpms = NULL;
+            tmpms = realloc(uc->mixer_settings, sizeof(struct mixer_setting*) * uc->mixer_array_size); 
+            if (tmpms == NULL) {
+                printf("Yowie, couldn't realloc\n");
+            } else {
+                uc->mixer_settings = tmpms;
+            }
+        }
 	}
 
 	state->level++;
@@ -108,7 +138,6 @@ int xparse_main(int argc, char **argv)
 		fprintf(stderr, "Boo! failed to create parser!\n");
 		return -1;
 	}
-	printf("Boo ya!\n");
 
 	memset(&state, 0, sizeof(state));
 
@@ -135,10 +164,11 @@ int xparse_main(int argc, char **argv)
 
     for ( int i = 0; i < state.num_use_cases; i++) {
         struct use_case *uc = state.use_cases[i];
-        printf("\nUSE CASE:: name: %s\n", uc->name);
+        printf("\nUSE CASE:: name: %s - num_mixer_settings: %d\n", uc->name, uc->num_mixer_settings);
         for (int j = 0; j < uc->num_mixer_settings; j++) {
-            struct mixer_setting *ms = uc->mixer_settings[j];
-            printf("  CTL:: name: %s // id: %s // val: %s\n", ms->name, ms->id, ms->value);
+            printf(" J %d\n", j);
+            struct mixer_setting *ms = &uc->mixer_settings[j];
+            printf("  CTL:: name: %s // // val: %s\n", ms->name, ms->value);
         }
     }
 
