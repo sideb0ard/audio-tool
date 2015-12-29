@@ -2,12 +2,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#define BUFFER_SIZE 100000
-#define ARRAY_SIZE 40000000
+#include "xparse.h"
 
-// CONFIG_PARSE_STATE is passed bewteen functions to maintain
-// a state. It contains an array of 'use_case's, which contain
-// an array of 'mixer_setting's
+// CONFIG_PARSE_STATE is passed bewteen 
+// functions to maintain a state. It contains an array of 'use_case's,
+// which contain an array of 'mixer_setting's
 
 struct mixer_setting {
     XML_Char *name;
@@ -17,44 +16,61 @@ struct mixer_setting {
 
 struct use_case {
     XML_Char *name;
-    struct mixer_setting *mixer_settings;
+    struct mixer_setting **mixer_settings;
     int num_mixer_settings;
     int mixer_array_size;
-};
+};  
 
 struct config_parse_state {
-	XML_Char last_content[BUFFER_SIZE];
-    struct use_case *use_cases[10000];
+    XML_Char last_content[BUFFER_SIZE];
+    struct use_case **use_cases;
     int num_use_cases;
-	int level;
+    int use_cases_array_size;
+    int level;
 };
 
 // functions to generate new 'mixer_setting' and 'use_case'
 
 struct mixer_setting * new_mixer_setting() {
     struct mixer_setting *ms = malloc(sizeof(struct mixer_setting));
-    ms->name = malloc(sizeof(XML_Char)*50);
-    ms->value = malloc(sizeof(XML_Char)*50);
-    ms->id = malloc(sizeof(XML_Char)*50);
+    ms->name = malloc(sizeof(XML_Char)*STRING_MAX);
+    ms->value = malloc(sizeof(XML_Char)*STRING_MAX);
+    ms->id = malloc(sizeof(XML_Char)*STRING_MAX);
     return ms;
 }
 
 struct use_case * get_use_case(struct config_parse_state *state) {
+
+    // find existing
     for (int i = 0; i < state->num_use_cases; i++) {
         if (!strcmp(state->last_content, state->use_cases[i]->name)) {
             return state->use_cases[i];
         }
     }
+    // or create new use case //
     struct use_case *uc = malloc(sizeof(struct use_case));
-    uc->name = malloc(sizeof(XML_Char)*50);
-    strncpy(uc->name, state->last_content, 50);
-    // 
+    uc->name = malloc(sizeof(XML_Char)*STRING_MAX+1);
+    strncpy(uc->name, state->last_content, STRING_MAX);
     uc->mixer_array_size = ARRAY_SIZE;
-    uc->mixer_settings = malloc(sizeof(struct mixer_setting*) * uc->mixer_array_size);
-    printf("INIT MIXER ARRAY SIZE: %d\n", uc->mixer_array_size);
-    // 
+    uc->mixer_settings = malloc(sizeof(struct mixer_setting * ) * uc->mixer_array_size);
+
     state->use_cases[state->num_use_cases] = uc;
     state->num_use_cases++;
+
+    //// resize state->use_cases if needed
+    //if (state->num_use_cases >= state->use_cases_array_size) {
+    //    printf("Oh, RESIZING USE CASE ARRAY\n");
+    //    state->use_cases_array_size *= 2;
+    //    void *tmpuc;
+    //    tmpuc = realloc(state->use_cases, sizeof(struct use_case *) * state->use_cases_array_size); 
+    //    if (tmpuc == NULL) {
+    //        printf("Yowie, couldn't realloc\n");
+    //    } else {
+    //        state->use_cases = tmpuc;
+    //    }
+    //    printf("DONE REZISING\n");
+    //}
+     
     return uc;
 }
 
@@ -78,7 +94,7 @@ void start_tag(void *data, const XML_Char *tag_name, const XML_Char **attr)
     if (state->level == 0) {
 		strcpy(state->last_content, "initial-settings");
 	} else if (state->level ==1 && !strcmp(tag_name, "path")) {
-		strcpy(state->last_content, attr_name);
+		strncpy(state->last_content, attr_name, STRING_MAX);
     }
 
 	if (!strcmp(tag_name, "ctl")) {
@@ -87,22 +103,23 @@ void start_tag(void *data, const XML_Char *tag_name, const XML_Char **attr)
 
         struct mixer_setting *ms = new_mixer_setting();
         if (attr_name)
-            strncpy(ms->name, attr_name, 50);
+            strncpy(ms->name, attr_name, STRING_MAX);
         if (attr_value)
-            strncpy(ms->value, attr_value, 50);
+            strncpy(ms->value, attr_value, STRING_MAX);
         if (attr_id)
-            strncpy(ms->id, attr_id, 50);
+            strncpy(ms->id, attr_id, STRING_MAX);
 
-        printf("ADDING SETTING - %d - %d\n", uc->num_mixer_settings, uc->mixer_array_size);
-        uc->mixer_settings[uc->num_mixer_settings] = *ms;
+        printf("FINE HERE?\n");
+        printf("WHUT ABOUT HERE?\n");
+        uc->mixer_settings[uc->num_mixer_settings] = ms;
         uc->num_mixer_settings++;
 
-        //if (uc->num_mixer_settings >= uc->mixer_array_size) {
-        if (uc->mixer_array_size <= uc->num_mixer_settings) {
-            printf("RESIZING!\n");
+        // resize mixer_settings if needed
+        if (uc->num_mixer_settings >= uc->mixer_array_size) {
+            printf("RESIZING MIXER_SETTINGS\n");
             uc->mixer_array_size *= 2;
-            struct mixer_setting *tmpms = NULL;
-            tmpms = realloc(uc->mixer_settings, sizeof(struct mixer_setting*) * uc->mixer_array_size); 
+            void *tmpms;
+            tmpms = realloc(uc->mixer_settings, sizeof(struct mixer_setting *) * uc->mixer_array_size); 
             if (tmpms == NULL) {
                 printf("Yowie, couldn't realloc\n");
             } else {
@@ -140,6 +157,9 @@ int xparse_main(int argc, char **argv)
 	}
 
 	memset(&state, 0, sizeof(state));
+    state.use_cases_array_size = ARRAY_SIZE;
+    //state.use_cases = malloc(sizeof(struct use_case *) * state.use_cases_array_size);
+    state.use_cases = malloc(sizeof(struct use_case *) * 1000);
 
 	XML_SetUserData(parser, &state);
 	XML_SetElementHandler(parser, start_tag, end_tag);
@@ -166,8 +186,7 @@ int xparse_main(int argc, char **argv)
         struct use_case *uc = state.use_cases[i];
         printf("\nUSE CASE:: name: %s - num_mixer_settings: %d\n", uc->name, uc->num_mixer_settings);
         for (int j = 0; j < uc->num_mixer_settings; j++) {
-            printf(" J %d\n", j);
-            struct mixer_setting *ms = &uc->mixer_settings[j];
+            struct mixer_setting *ms = uc->mixer_settings[j];
             printf("  CTL:: name: %s // // val: %s\n", ms->name, ms->value);
         }
     }

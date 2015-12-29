@@ -50,6 +50,7 @@
 #include "tinymix.h"
 #include "tinyplay.h"
 #include "tone-generator.h"
+#include "xparse.h"
 
 /* defined in config.c */
 int parse_args(struct audio_tool_config *config, int *argc, char ***argv);
@@ -111,7 +112,7 @@ int main(int argc, char* argv[])
 		} else if (strcmp(argv[0], "config") == 0) {
 			ret = config_cmd_main(&config, argc, argv);
 		} else if (strcmp(argv[0], "xparse") == 0) {
-			ret = xparse_main();
+			ret = xparse_main(argc, argv);
 		} else {
 			usage();
 			ret = 1;
