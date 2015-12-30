@@ -56,6 +56,7 @@ LIB_OBJECTS = \
 	alsa-control.o \
 	config_cmd.o \
 	xparse.o \
+	tinyroute.o \
 
 MODULES = \
 	card-omap-abe.o \
@@ -78,9 +79,6 @@ tinymix: tinymix.o $(LIB)
 
 pulse-generator: pulse-generator.o $(LIB)
 	$(TARGETCC) $(TARGETCFLAGS) $(TARGETLDFLAGS) -o $@ $^ $(TARGETLDLIBS)
-
-#xparse: xparse.o
-#	$(TARGETCC) $(TARGETCFLAGS) $(TARGETLDFLAGS) -o $@ $^ $(TARGETLDLIBS)
 
 $(LIB): $(LIB_OBJECTS)
 	$(TARGETAR) rc $@ $^

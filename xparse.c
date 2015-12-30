@@ -4,7 +4,7 @@
 
 #include "xparse.h"
 
-// CONFIG_PARSE_STATE is passed bewteen 
+// CONFIG_PARSE_STATE is passed between XML Parsing
 // functions to maintain a state. It contains an array of 'use_case's,
 // which contain an array of 'mixer_setting's
 
@@ -44,6 +44,7 @@ struct use_case * get_use_case(struct config_parse_state *state) {
     // find existing
     for (int i = 0; i < state->num_use_cases; i++) {
         if (!strcmp(state->last_content, state->use_cases[i]->name)) {
+            printf("Found EXISTING USE CASE - %s\n", state->use_cases[i]->name);
             return state->use_cases[i];
         }
     }
@@ -51,32 +52,37 @@ struct use_case * get_use_case(struct config_parse_state *state) {
     struct use_case *uc = malloc(sizeof(struct use_case));
     uc->name = malloc(sizeof(XML_Char)*STRING_MAX+1);
     strncpy(uc->name, state->last_content, STRING_MAX);
-    uc->mixer_array_size = ARRAY_SIZE;
+    uc->mixer_array_size = DEFAULT_ARRAY_SIZE;
     uc->mixer_settings = malloc(sizeof(struct mixer_setting * ) * uc->mixer_array_size);
 
+    // state book keeping
     state->use_cases[state->num_use_cases] = uc;
     state->num_use_cases++;
 
     //// resize state->use_cases if needed
     //if (state->num_use_cases >= state->use_cases_array_size) {
-    //    printf("Oh, RESIZING USE CASE ARRAY\n");
-    //    state->use_cases_array_size *= 2;
-    //    void *tmpuc;
-    //    tmpuc = realloc(state->use_cases, sizeof(struct use_case *) * state->use_cases_array_size); 
-    //    if (tmpuc == NULL) {
-    //        printf("Yowie, couldn't realloc\n");
-    //    } else {
-    //        state->use_cases = tmpuc;
-    //    }
-    //    printf("DONE REZISING\n");
-    //}
-     
+    if (state->use_cases_array_size <= state->num_use_cases) {
+        printf("Oh, RESIZING USE CASE ARRAY\n");
+        printf("NUM USE CASES: %d // USECASE_ARRAY_SIZE: %d\n", state->num_use_cases, state->use_cases_array_size);
+        state->use_cases_array_size *= 2;
+        void *tmpuc;
+        tmpuc = realloc(state->use_cases, sizeof(struct use_case *) * state->use_cases_array_size); 
+        if (tmpuc == NULL) {
+            printf("Yowie, couldn't realloc\n");
+        } else {
+            state->use_cases = tmpuc;
+        }
+        printf("DONE REZISING\n");
+    }
+
+    //printf("SANITY CHECK: %s\n", uc->name);
     return uc;
 }
 
 // functions used by Expat 
 void start_tag(void *data, const XML_Char *tag_name, const XML_Char **attr)
 {
+    printf("\n\nBOOM\n\n");
 	const XML_Char *attr_name  = NULL;
 	const XML_Char *attr_id    = NULL;
 	const XML_Char *attr_value = NULL;
@@ -109,9 +115,11 @@ void start_tag(void *data, const XML_Char *tag_name, const XML_Char **attr)
         if (attr_id)
             strncpy(ms->id, attr_id, STRING_MAX);
 
-        printf("FINE HERE?\n");
-        printf("WHUT ABOUT HERE?\n");
+        printf("ANOTHER SANITY CHECK - %s\n", uc->name);
+        printf("ANNOTHEROTHER SANITY CHECK - %d\n", uc->num_mixer_settings);
+
         uc->mixer_settings[uc->num_mixer_settings] = ms;
+
         uc->num_mixer_settings++;
 
         // resize mixer_settings if needed
@@ -157,9 +165,9 @@ int xparse_main(int argc, char **argv)
 	}
 
 	memset(&state, 0, sizeof(state));
-    state.use_cases_array_size = ARRAY_SIZE;
-    //state.use_cases = malloc(sizeof(struct use_case *) * state.use_cases_array_size);
-    state.use_cases = malloc(sizeof(struct use_case *) * 1000);
+    state.use_cases_array_size = DEFAULT_ARRAY_SIZE;
+    //state.use_cases_array_size = 1000;
+    state.use_cases = malloc(sizeof(struct use_case *) * state.use_cases_array_size);
 
 	XML_SetUserData(parser, &state);
 	XML_SetElementHandler(parser, start_tag, end_tag);

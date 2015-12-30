@@ -49,6 +49,7 @@
 #include "tinycap.h"
 #include "tinymix.h"
 #include "tinyplay.h"
+#include "tinyroute.h"
 #include "tone-generator.h"
 #include "xparse.h"
 
@@ -113,6 +114,8 @@ int main(int argc, char* argv[])
 			ret = config_cmd_main(&config, argc, argv);
 		} else if (strcmp(argv[0], "xparse") == 0) {
 			ret = xparse_main(argc, argv);
+		} else if (strcmp(argv[0], "route") == 0) {
+			ret = tinyroute_main(argc, argv);
 		} else {
 			usage();
 			ret = 1;
