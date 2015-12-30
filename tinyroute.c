@@ -179,38 +179,41 @@ static int path_add_setting(struct audio_route *ar, struct mixer_path *path,
 static int path_add_value(struct audio_route *ar, struct mixer_path *path,
                           struct mixer_value *mixer_value)
 {
-    printf("In PATH_ADD_VALUE with path %s\n", path->name);
+    printf("In PATH_ADD_VALUE with path %s with %s\n", path->name, mixer_value->name);
     unsigned int i;
     int path_index;
     unsigned int num_values;
     struct mixer_ctl *ctl;
 
-    path_index = find_ctl_index_in_path(path, mixer_value->ctl_index);
-    if (path_index < 0) {
-        /* New path */
+    printf(":MIXER_PATH SIZE AND LENGTH %d %d\n", path->size, path->length);
+    path_index = alloc_path_setting(path);
+    printf("PATH_INDEX NOW %d\n", path_index);
+    //path_index = find_ctl_index_in_path(path, mixer_value->ctl_index);
+    //if (path_index < 0) {
+    //    /* New path */
 
-        printf("NEW PATH - CREATING NOW...\n");
-        path_index = alloc_path_setting(path);
-        if (path_index < 0) {
-            return -1;
-        }
+    //    printf("NEW PATH - CREATING NOW...\n");
+    //    path_index = alloc_path_setting(path);
+    //    if (path_index < 0) {
+    //        return -1;
+    //    }
 
-        /* initialise the new path setting */
-        path->setting[path_index].name = strdup(mixer_value->name);
-        path->setting[path_index].ctl_index = mixer_value->ctl_index;
-        path->setting[path_index].num_values = num_values;
-        path->setting[path_index].value = malloc(num_values * sizeof(int));
-        path->setting[path_index].value[0] = mixer_value->value;
-    }
+    //    /* initialise the new path setting */
+    path->setting[path_index].name = strdup(mixer_value->name);
+    path->setting[path_index].ctl_index = mixer_value->ctl_index;
+    path->setting[path_index].num_values = num_values;
+    path->setting[path_index].value = malloc(num_values * sizeof(int));
+    path->setting[path_index].value[0] = mixer_value->value;
+    //}
 
-    if (mixer_value->index == -1) {
-        /* set all values the same */
-        for (i = 0; i < num_values; i++)
-            path->setting[path_index].value[i] = mixer_value->value;
-    } else {
-        /* set only one value */
-        path->setting[path_index].value[mixer_value->index] = mixer_value->value;
-    }
+    //if (mixer_value->index == -1) {
+    //    /* set all values the same */
+    //    for (i = 0; i < num_values; i++)
+    //        path->setting[path_index].value[i] = mixer_value->value;
+    //} else {
+    //    /* set only one value */
+    //    path->setting[path_index].value[mixer_value->index] = mixer_value->value;
+    //}
 
     return 0;
 }
@@ -459,7 +462,8 @@ int tinyroute_main(int argc, char **argv)
         printf("Mixer Path Length: %d\n", mp.length);
         for (int j = 0; j < mp.length; j++) {
             struct mixer_setting ms = mp.setting[j];
-            printf("MIXER SETTING NAME - %s\n", ms.name);
+            printf("  MIXER SETTING NAME - %s\n", ms.name);
+            printf("  MIXER SETTING VALUE - %d\n", ms.value);
         }
     }
 
