@@ -5,8 +5,8 @@
 
 #include <tinyalsa/asoundlib.h>
 
-#define MIXER_XML_PATH "example_android_mixer_paths.xml.SHORT"
-//#define MIXER_XML_PATH "example_android_mixer_paths.xml"
+//#define MIXER_XML_PATH "example_android_mixer_paths.xml.SHORT"
+#define MIXER_XML_PATH "example_android_mixer_paths.xml"
 #define BUF_SIZE 1024
 #define INITIAL_MIXER_PATH_SIZE 8
 
@@ -25,16 +25,21 @@ struct mixer_state {
 
 struct mixer_setting {
     char *name;
-    unsigned int ctl_index;
-    unsigned int num_values;
-    int *value;
+    char *id;
+    char *value;
+    //char *name;
+    //unsigned int ctl_index;
+    //unsigned int num_values;
+    //int *value;
 };
 
-struct mixer_value {
+struct mixer_value {  // tmp holding location, used for ctl_setting
     char *name;
-    unsigned int ctl_index;
-    int index;
-    int value;
+    char *id;
+    char *value;
+    // unsigned int ctl_index;
+    // int index;
+    // int value;
 };
 
 struct mixer_path {
@@ -61,8 +66,7 @@ struct config_parse_state {
 };
 
 
-/// methodzzzz
-
+// FUNCTIONSZZ /////////////////////////
 
 static int alloc_path_setting(struct mixer_path *path)
 {
@@ -113,20 +117,12 @@ static int alloc_mixer_state(struct audio_route *ar)
         ar->mixer_state[i].ctl = ctl;
         ar->mixer_state[i].num_values = num_values;
 
-        // skip unsupported types in XML
-        //type = mixer_ctl_get_type(ctl);
-        //if (!is_supported_ctl_type(type))
-        //    continue;
-
         ar->mixer_state[i].old_value = malloc(num_values * sizeof(int));
         ar->mixer_state[i].new_value = malloc(num_values * sizeof(int));
         ar->mixer_state[i].reset_value = malloc(num_values * sizeof(int));
 
         if (type == MIXER_CTL_TYPE_ENUM)
             ar->mixer_state[i].old_value[0] = mixer_ctl_get_value(ctl, 0);
-        // TODO: make wurk!
-        //else
-        //    mixer_ctl_get_array(ctl, ar->mixer_state[i].old_value, num_values);
         memcpy(ar->mixer_state[i].new_value, ar->mixer_state[i].old_value, num_values * sizeof(int));
     }
     return 0;
@@ -145,17 +141,17 @@ static int mixer_enum_string_to_value(struct mixer_ctl *ctl, const char *string)
     return i;
 }
 
-static int find_ctl_index_in_path(struct mixer_path *path,
-                                  unsigned int ctl_index)
-{
-    unsigned int i;
-
-    for (i = 0; i < path->length; i++)
-        if (path->setting[i].ctl_index == ctl_index)
-            return i;
-
-    return -1;
-}
+// static int find_ctl_index_in_path(struct mixer_path *path,
+//                                   unsigned int ctl_index)
+// {
+//     unsigned int i;
+// 
+//     for (i = 0; i < path->length; i++)
+//         if (path->setting[i].ctl_index == ctl_index)
+//             return i;
+// 
+//     return -1;
+// }
 
 static int path_add_setting(struct audio_route *ar, struct mixer_path *path,
                             struct mixer_setting *setting)
@@ -166,12 +162,18 @@ static int path_add_setting(struct audio_route *ar, struct mixer_path *path,
     if (path_index < 0)
         return -1;
 
-    path->setting[path_index].ctl_index = setting->ctl_index;
-    path->setting[path_index].num_values = setting->num_values;
-    path->setting[path_index].value = malloc(setting->num_values * sizeof(int));
-    /* copy all values */
-    memcpy(path->setting[path_index].value, setting->value,
-           setting->num_values * sizeof(int));
+    if (setting->name)
+        path->setting[path_index].name = strdup(setting->name);
+    if (setting->id)
+        path->setting[path_index].id = strdup(setting->id);
+    if (setting->value)
+        path->setting[path_index].value = strdup(setting->value);
+    //path->setting[path_index].ctl_index = setting->ctl_index;
+    //path->setting[path_index].num_values = setting->num_values;
+    //path->setting[path_index].value = malloc(setting->num_values * sizeof(int));
+    ///* copy all values */
+    //memcpy(path->setting[path_index].value, setting->value,
+    //       setting->num_values * sizeof(int));
 
     return 0;
 }
@@ -188,23 +190,19 @@ static int path_add_value(struct audio_route *ar, struct mixer_path *path,
     printf(":MIXER_PATH SIZE AND LENGTH %d %d\n", path->size, path->length);
     path_index = alloc_path_setting(path);
     printf("PATH_INDEX NOW %d\n", path_index);
-    //path_index = find_ctl_index_in_path(path, mixer_value->ctl_index);
-    //if (path_index < 0) {
-    //    /* New path */
 
-    //    printf("NEW PATH - CREATING NOW...\n");
-    //    path_index = alloc_path_setting(path);
-    //    if (path_index < 0) {
-    //        return -1;
-    //    }
-
-    //    /* initialise the new path setting */
+    /* initialise the new path setting */
     path->setting[path_index].name = strdup(mixer_value->name);
-    path->setting[path_index].ctl_index = mixer_value->ctl_index;
-    path->setting[path_index].num_values = num_values;
-    path->setting[path_index].value = malloc(num_values * sizeof(int));
-    path->setting[path_index].value[0] = mixer_value->value;
-    //}
+    //if (path->setting[path_index].id)
+    //    path->setting[path_index].id = strdup(mixer_value->id);
+    //printf("VAL ISSSSS %s\n",mixer_value->value);
+    //path->setting[path_index].value = strdup(mixer_value->value);
+
+    // OLD SHT
+    // path->setting[path_index].ctl_index = mixer_value->ctl_index;
+    // path->setting[path_index].num_values = num_values;
+    // path->setting[path_index].value = malloc(num_values * sizeof(int));
+    // path->setting[path_index].value[0] = mixer_value->value;
 
     //if (mixer_value->index == -1) {
     //    /* set all values the same */
@@ -215,6 +213,7 @@ static int path_add_value(struct audio_route *ar, struct mixer_path *path,
     //    path->setting[path_index].value[mixer_value->index] = mixer_value->value;
     //}
 
+    printf("MADE IT HERE THO..\n");
     return 0;
 }
 
@@ -235,11 +234,17 @@ static int path_add_path(struct audio_route *ar, struct mixer_path *path,
 {
     unsigned int i;
 
+
+    // TODO: something!!
+
+    printf("IN PATH_ADD_PATH? LENGTH %d \n", sub_path->length);
     for (i = 0; i < sub_path->length; i++) {
+        printf("WITH %s\n", &sub_path->name);
         if (path_add_setting(ar, path, &sub_path->setting[i]) < 0)
             return -1;
     }
 
+    printf("PATH_ADD_PATH ALL GOOD\n");
     return 0;
 }
 
@@ -318,27 +323,29 @@ static void start_tag(void *data, const XML_Char *tag_name,
                 /* top level path: create and stash the path */
                 state->path = path_create(ar, (char *)attr_name);
             } else {
-                /* nested path */
-                struct mixer_path *sub_path = path_get_by_name(ar, attr_name);
-                path_add_path(ar, state->path, sub_path);
+                printf("NESTED ALL GOOD?\n");
+                ///* nested path */
+                //struct mixer_path *sub_path = path_get_by_name(ar, attr_name);
+                //path_add_path(ar, state->path, sub_path);
+                //printf("NESTED ALL GOOD!\n");
             }
         }
     }
    else if (strcmp(tag_name, "ctl") == 0) {
         printf("TAG IS CTL %s\n", attr_name);
 
-        switch (mixer_ctl_get_type(ctl)) {
-        case MIXER_CTL_TYPE_BOOL:
-        case MIXER_CTL_TYPE_INT:
-            value = (int) strtol((char *)attr_value, NULL, 0);
-            break;
-        case MIXER_CTL_TYPE_ENUM:
-            value = mixer_enum_string_to_value(ctl, (char *)attr_value);
-            break;
-        default:
-            value = 0;
-            break;
-        }
+        //switch (mixer_ctl_get_type(ctl)) {
+        //case MIXER_CTL_TYPE_BOOL:
+        //case MIXER_CTL_TYPE_INT:
+        //    value = (int) strtol((char *)attr_value, NULL, 0);
+        //    break;
+        //case MIXER_CTL_TYPE_ENUM:
+        //    value = mixer_enum_string_to_value(ctl, (char *)attr_value);
+        //    break;
+        //default:
+        //    value = 0;
+        //    break;
+        //}
 
         if (state->level == 1) {
             /* top level ctl (initial setting) */
@@ -364,12 +371,14 @@ static void start_tag(void *data, const XML_Char *tag_name,
         } else {
             /* nested ctl (within a path) */
             mixer_value.name = attr_name;
-            mixer_value.ctl_index = ctl_index;
-            mixer_value.value = value;
-            if (attr_id)
-                mixer_value.index = atoi((char *)attr_id);
-            else
-                mixer_value.index = -1;
+            // mixer_value.ctl_index = ctl_index;
+            mixer_value.value = attr_value;
+            printf("ATTR VALUE %s\n", attr_value);
+            mixer_value.id = attr_id;
+            //if (attr_id)
+            //    mixer_value.index = atoi((char *)attr_id);
+            //else
+            //    mixer_value.index = -1;
             path_add_value(ar, state->path, &mixer_value);
         }
     }
@@ -463,7 +472,7 @@ int tinyroute_main(int argc, char **argv)
         for (int j = 0; j < mp.length; j++) {
             struct mixer_setting ms = mp.setting[j];
             printf("  MIXER SETTING NAME - %s\n", ms.name);
-            printf("  MIXER SETTING VALUE - %d\n", ms.value);
+            //printf("  MIXER SETTING VALUE - %s\n", ms.value);
         }
     }
 
