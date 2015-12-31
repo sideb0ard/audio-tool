@@ -14,14 +14,10 @@
 ///////////////////////////////////////////////////////
 // All gloriously stolen from audio_route.c
 ///////////////////////////////////////////////////////
-
-struct mixer_state {
-    struct mixer_ctl *ctl;
-    unsigned int num_values;
-    int *old_value;
-    int *new_value;
-    int *reset_value;
-};
+// There is a CONFIG_PARSE_STATE which is passed around XML
+// functions as a holding place for objects. This has a
+// singleton AUDIO_ROUTE object which contains an array of
+// MIXER_PATHS, which in turn, contains an array of MIXER_SETTINGS
 
 struct mixer_setting {
     char *name;
@@ -43,9 +39,8 @@ struct mixer_path {
 };
 
 struct audio_route {
+    // NOT SURE IF THIS REALLY NEEDED
     struct mixer *mixer;
-    unsigned int num_mixer_ctls;
-    struct mixer_state *mixer_state;
 
     unsigned int mixer_path_size;
     unsigned int num_mixer_paths;
@@ -89,36 +84,6 @@ static int alloc_path_setting(struct mixer_path *path)
     return path_index;
 }
 
-static int alloc_mixer_state(struct audio_route *ar)
-{
-    unsigned int i;
-    // unsigned int j;
-    unsigned int num_values;
-    struct mixer_ctl *ctl;
-    enum mixer_ctl_type type;
-
-    ar->num_mixer_ctls = mixer_get_num_ctls(ar->mixer);
-    ar->mixer_state = malloc(ar->num_mixer_ctls * sizeof(struct mixer_state));
-    if (!ar->mixer_state)
-        return -1;
-
-    for (i = 0; i < ar->num_mixer_ctls; i++) {
-        ctl = mixer_get_ctl(ar->mixer, i);
-        num_values = mixer_ctl_get_num_values(ctl);
-
-        ar->mixer_state[i].ctl = ctl;
-        ar->mixer_state[i].num_values = num_values;
-
-        ar->mixer_state[i].old_value = malloc(num_values * sizeof(int));
-        ar->mixer_state[i].new_value = malloc(num_values * sizeof(int));
-        ar->mixer_state[i].reset_value = malloc(num_values * sizeof(int));
-
-        if (type == MIXER_CTL_TYPE_ENUM)
-            ar->mixer_state[i].old_value[0] = mixer_ctl_get_value(ctl, 0);
-        memcpy(ar->mixer_state[i].new_value, ar->mixer_state[i].old_value, num_values * sizeof(int));
-    }
-    return 0;
-}
 
 static int path_add_setting(struct audio_route *ar, struct mixer_path *path,
                             struct mixer_setting *setting)
@@ -305,23 +270,9 @@ void print_routes(struct config_parse_state *state)
     }
 }
 
-int tinyroute_main(int argc, char **argv)
+struct audio_route * setup_audio_route()
 {
-    struct config_parse_state state;
-    XML_Parser parser;
-    FILE *file;
-    int bytes_read;
-    void *buf;
-    struct audio_route *ar;   // i.e use case
-
-
-    // TODO: cleanup
-    // 1. allocate audio_route
-    // 2. allocate state
-    // 3. setup XML expat stuff
-    // 4. print routes
-    // 5. cleanup
-
+    struct audio_route *ar;
     ar = calloc(1, sizeof(struct audio_route));
     if (!ar)
         goto errr;
@@ -336,8 +287,18 @@ int tinyroute_main(int argc, char **argv)
     ar->mixer_path_size = 0;
     ar->num_mixer_paths = 0;
 
-    if (alloc_mixer_state(ar) < 0)
-        goto errr;
+    return ar;
+
+errr:
+    printf("BURNEY!\n");
+}
+
+void parse_xml(struct config_parse_state *state)
+{
+    XML_Parser parser;
+    FILE *file;
+    int bytes_read;
+    void *buf;
 
     file = fopen(MIXER_XML_PATH, "r");
     if (!file) {
@@ -351,9 +312,7 @@ int tinyroute_main(int argc, char **argv)
         goto errr;
     }
 
-    memset(&state, 0, sizeof(state));
-    state.ar = ar;
-    XML_SetUserData(parser, &state);
+    XML_SetUserData(parser, state);
     XML_SetElementHandler(parser, start_tag, end_tag);
 
     for (;;) {
@@ -373,7 +332,23 @@ int tinyroute_main(int argc, char **argv)
 
     XML_ParserFree(parser);
     fclose(file);
+errr:
+    printf("BURNEY!\n");
+}
 
+int tinyroute_main(int argc, char **argv)
+{
+
+    // 1. allocate audio_route and setup state
+    struct audio_route *ar = setup_audio_route();
+    struct config_parse_state state;
+    memset(&state, 0, sizeof(state));
+    state.ar = ar;
+
+    // 2. parse XML
+    parse_xml(&state);
+
+    // 3. print results
     print_routes(&state);
 
     return 0;
