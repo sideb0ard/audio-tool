@@ -11,6 +11,7 @@
 #define MIXER_XML_PATH "example_android_mixer_paths.xml"
 #define BUF_SIZE 1024
 #define INITIAL_MIXER_PATH_SIZE 8
+#define TOP_LEVEL_XML_SETTINGS "initial-settings"
 
 
 ///////////////////////////////////////////////////////
@@ -109,17 +110,16 @@ static int path_add_setting(struct audio_route *ar, struct mixer_path *path,
 static int path_add_value(struct audio_route *ar, struct mixer_path *path,
                           struct mixer_value *mixer_value)
 {
-    unsigned int i;
     int path_index;
-    unsigned int num_values;
-    struct mixer_ctl *ctl;
-
     path_index = alloc_path_setting(path);
 
     /* initialise the new path setting */
     path->setting[path_index].name = strdup(mixer_value->name);
-    if (mixer_value->id)
+    if (mixer_value->id) {
         path->setting[path_index].id = strdup(mixer_value->id);
+	} else {
+		path->setting[path_index].id = NULL;
+	}
     path->setting[path_index].value = strdup(mixer_value->value);
 
     return 0;
@@ -141,9 +141,6 @@ static int path_add_path(struct audio_route *ar, struct mixer_path *path,
                          struct mixer_path *sub_path)
 {
     unsigned int i;
-
-
-    // TODO: something!!
 
     for (i = 0; i < sub_path->length; i++) {
         if (path_add_setting(ar, path, &sub_path->setting[i]) < 0)
@@ -198,12 +195,7 @@ static void start_tag(void *data, const XML_Char *tag_name,
     struct config_parse_state *state = data;
     struct audio_route *ar = state->ar;
     unsigned int i;
-    unsigned int ctl_index;
-    struct mixer_ctl *ctl;
-    int value;
-    unsigned int id;
     struct mixer_value mixer_value;
-    enum mixer_ctl_type type;
 
     /* Get name, id and value attributes (these may be empty) */
     for (i = 0; attr[i]; i += 2) {
@@ -215,7 +207,6 @@ static void start_tag(void *data, const XML_Char *tag_name,
             attr_value = attr[i + 1];
     }
 
-
     /* Look at tags */
     if (strcmp(tag_name, "path") == 0) {
         if (attr_name == NULL) {
@@ -225,26 +216,20 @@ static void start_tag(void *data, const XML_Char *tag_name,
                 /* top level path: create and stash the path */
                 state->path = path_create(ar, (char *)attr_name);
             } else {
-                // TODO - fix!
-                ///* nested path */
-                //struct mixer_path *sub_path = path_get_by_name(ar, attr_name);
-                //path_add_path(ar, state->path, sub_path);
+                /* nested path */
+                struct mixer_path *sub_path = path_get_by_name(ar, attr_name);
+                path_add_path(ar, state->path, sub_path);
             }
         }
     }
-   else if (strcmp(tag_name, "ctl") == 0) {
-        if (state->level == 1) {
-            // TODO: deal with init settings
-        } else {
-            /* nested ctl (within a path) */
-            mixer_value.name = attr_name;
-            mixer_value.value = attr_value;
-            mixer_value.id = attr_id;
+    else if (strcmp(tag_name, "ctl") == 0) {
+        mixer_value.name = (char *) attr_name;
+        mixer_value.value = (char *) attr_value;
+        mixer_value.id = (char *) attr_id;
 
-            path_add_value(ar, state->path, &mixer_value);
-        }
+        path_add_value(ar, state->path, &mixer_value);
     }
-done:
+
     state->level++;
 }
 
@@ -255,6 +240,12 @@ static void end_tag(void *data, const XML_Char *tag_name)
     state->level--;
 }
 
+void print_setting(struct mixer_setting *ms)
+{
+	printf("Name: %s // ID: %s // Value: %s\n",
+			ms->name, ms->id, ms->value);
+}
+
 void print_routes(struct config_parse_state *state)
 {
     int i, j;
@@ -262,13 +253,11 @@ void print_routes(struct config_parse_state *state)
     for ( i = 0; i < state->ar->num_mixer_paths; i++) {
         struct mixer_path mp = state->ar->mixer_path[i];
         printf("\nPATHe: %s\n", mp.name);
-        printf("Mixer Path Size: %d\n", mp.size);
-        printf("Mixer Path Length: %d\n", mp.length);
         for ( j = 0; j < mp.length; j++) {
             struct mixer_setting ms = mp.setting[j];
-            printf("  MIXER SETTING NAME - %s\n", ms.name);
-            //printf("  MIXER SETTING VALUE - %s\n", ms.value);
+			print_setting(&ms);
         }
+		printf("\n");
     }
 }
 
@@ -281,9 +270,7 @@ struct audio_route * setup_audio_route(struct audio_tool_config *config)
         goto errr;
 	}
 
-    //ar->mixer = mixer_open(0); // default card
-	printf("Opening card from config %d\n", config->card);
-    ar->mixer = mixer_open(config->card); // default card
+    ar->mixer = mixer_open(config->card);
     if (!ar->mixer) {
         printf("Oofft, nae mixer\n");
         goto errr;
@@ -296,7 +283,8 @@ struct audio_route * setup_audio_route(struct audio_tool_config *config)
     return ar;
 
 errr:
-    printf("BURNEY!\n");
+    printf("BURNEY! - Couldn't SETUP AUDIO ROUTE\n");
+	exit(-1);
 }
 
 void parse_xml(struct config_parse_state *state)
@@ -345,7 +333,8 @@ void parse_xml(struct config_parse_state *state)
 	return;
 
 errr:
-    printf("BURNEY!\n");
+    printf("BURNEY! PARSE_XML is aRSE IN PARSELY\n");
+	exit(-1);
 }
 
 int tinyroute_main(struct audio_tool_config *config, int argc, char **argv)
@@ -356,6 +345,8 @@ int tinyroute_main(struct audio_tool_config *config, int argc, char **argv)
     struct config_parse_state state;
     memset(&state, 0, sizeof(state));
     state.ar = ar;
+	// setup top level initial settings path
+	state.path = path_create(ar, TOP_LEVEL_XML_SETTINGS);
 
     // 2. parse XML
     parse_xml(&state);
@@ -366,8 +357,4 @@ int tinyroute_main(struct audio_tool_config *config, int argc, char **argv)
     return 0;
 
     // TODO: FREE RESOURCES
-
-errr:
-    printf("YOUCH\n");
-    return -1;
 }
