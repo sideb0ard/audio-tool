@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "config.h"
+
 #include <tinyalsa/asoundlib.h>
 
 //#define MIXER_XML_PATH "example_android_mixer_paths.xml.SHORT"
@@ -255,14 +257,14 @@ static void end_tag(void *data, const XML_Char *tag_name)
 
 void print_routes(struct config_parse_state *state)
 {
-    int i;
+    int i, j;
     printf("\n==============================================\n");
     for ( i = 0; i < state->ar->num_mixer_paths; i++) {
         struct mixer_path mp = state->ar->mixer_path[i];
         printf("\nPATHe: %s\n", mp.name);
         printf("Mixer Path Size: %d\n", mp.size);
         printf("Mixer Path Length: %d\n", mp.length);
-        for (int j = 0; j < mp.length; j++) {
+        for ( j = 0; j < mp.length; j++) {
             struct mixer_setting ms = mp.setting[j];
             printf("  MIXER SETTING NAME - %s\n", ms.name);
             //printf("  MIXER SETTING VALUE - %s\n", ms.value);
@@ -270,14 +272,18 @@ void print_routes(struct config_parse_state *state)
     }
 }
 
-struct audio_route * setup_audio_route()
+struct audio_route * setup_audio_route(struct audio_tool_config *config)
 {
     struct audio_route *ar;
     ar = calloc(1, sizeof(struct audio_route));
-    if (!ar)
+    if (!ar) {
+		printf("Nae calloc!\n");
         goto errr;
+	}
 
-    ar->mixer = mixer_open(0); // default card
+    //ar->mixer = mixer_open(0); // default card
+	printf("Opening card from config %d\n", config->card);
+    ar->mixer = mixer_open(config->card); // default card
     if (!ar->mixer) {
         printf("Oofft, nae mixer\n");
         goto errr;
@@ -317,11 +323,15 @@ void parse_xml(struct config_parse_state *state)
 
     for (;;) {
         buf = XML_GetBuffer(parser, BUF_SIZE);
-        if (buf == NULL)
+        if (buf == NULL) {
+			printf("NULL BUFF!\n");
             goto errr;
+		}
         bytes_read = fread(buf, 1, BUF_SIZE, file);
-        if (bytes_read < 0 )
+        if (bytes_read < 0 ) {
+			printf("Zero bytes read!\n");
             goto errr;
+		}
         if (XML_ParseBuffer(parser, bytes_read, bytes_read == 0) == XML_STATUS_ERROR) {
             printf("Xml file buggered\n");
             goto errr;
@@ -332,15 +342,17 @@ void parse_xml(struct config_parse_state *state)
 
     XML_ParserFree(parser);
     fclose(file);
+	return;
+
 errr:
     printf("BURNEY!\n");
 }
 
-int tinyroute_main(int argc, char **argv)
+int tinyroute_main(struct audio_tool_config *config, int argc, char **argv)
 {
 
     // 1. allocate audio_route and setup state
-    struct audio_route *ar = setup_audio_route();
+    struct audio_route *ar = setup_audio_route(config);
     struct config_parse_state state;
     memset(&state, 0, sizeof(state));
     state.ar = ar;

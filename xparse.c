@@ -41,8 +41,9 @@ struct mixer_setting * new_mixer_setting() {
 
 struct use_case * get_use_case(struct config_parse_state *state) {
 
+	int i;
     // find existing
-    for (int i = 0; i < state->num_use_cases; i++) {
+    for (i = 0; i < state->num_use_cases; i++) {
         if (!strcmp(state->last_content, state->use_cases[i]->name)) {
             printf("Found EXISTING USE CASE - %s\n", state->use_cases[i]->name);
             return state->use_cases[i];
@@ -87,8 +88,9 @@ void start_tag(void *data, const XML_Char *tag_name, const XML_Char **attr)
 	const XML_Char *attr_id    = NULL;
 	const XML_Char *attr_value = NULL;
 	struct config_parse_state *state = data;
+	int i;
 
-	for ( int i = 0; attr[i]; i += 2) {
+	for ( i = 0; attr[i]; i += 2) {
 		if (strcmp(attr[i], "name") == 0)
 			attr_name = attr[i + 1];
 		if (strcmp(attr[i], "id") == 0)
@@ -151,6 +153,7 @@ int xparse_main(int argc, char **argv)
 	struct config_parse_state state;
 	XML_Parser parser;
 	FILE *fp;
+	int i, j;
 
 	fp = fopen("example_android_mixer_paths.xml", "r");
 	if (fp == NULL) {
@@ -190,10 +193,10 @@ int xparse_main(int argc, char **argv)
 	fclose(fp);
 	XML_ParserFree(parser);
 
-    for ( int i = 0; i < state.num_use_cases; i++) {
+    for ( i = 0; i < state.num_use_cases; i++) {
         struct use_case *uc = state.use_cases[i];
         printf("\nUSE CASE:: name: %s - num_mixer_settings: %d\n", uc->name, uc->num_mixer_settings);
-        for (int j = 0; j < uc->num_mixer_settings; j++) {
+        for ( j = 0; j < uc->num_mixer_settings; j++) {
             struct mixer_setting *ms = uc->mixer_settings[j];
             printf("  CTL:: name: %s // // val: %s\n", ms->name, ms->value);
         }

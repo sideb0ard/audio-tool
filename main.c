@@ -60,11 +60,6 @@ void usage(void);
 int main(int argc, char* argv[])
 {
 
-	if (argc == 1) {
-		usage();
-		return 0;
-	}
-
 	struct audio_tool_config config;
 	int ret;
 	int tinyplay = 0, tinycap = 0, tinymix = 0;
@@ -115,11 +110,14 @@ int main(int argc, char* argv[])
 		} else if (strcmp(argv[0], "xparse") == 0) {
 			ret = xparse_main(argc, argv);
 		} else if (strcmp(argv[0], "route") == 0) {
-			ret = tinyroute_main(argc, argv);
+			ret = tinyroute_main(&config, argc, argv);
 		} else {
 			usage();
 			ret = 1;
 		}
+	} else {
+		usage();
+		return 0;
 	}
 
 	return ret;
