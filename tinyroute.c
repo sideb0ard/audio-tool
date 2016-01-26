@@ -8,10 +8,12 @@
 #include <tinyalsa/asoundlib.h>
 
 //#define MIXER_XML_PATH "example_android_mixer_paths.xml.SHORT"
-#define MIXER_XML_PATH "example_android_mixer_paths.xml"
+#define MIXER_XML_PATH "/system/etc/mixer_paths.xml"
 #define BUF_SIZE 1024
 #define INITIAL_MIXER_PATH_SIZE 8
 #define TOP_LEVEL_XML_SETTINGS "initial-settings"
+
+char *mixer_paths_xml = MIXER_XML_PATH;
 
 
 ///////////////////////////////////////////////////////
@@ -294,7 +296,7 @@ void parse_xml(struct config_parse_state *state)
     int bytes_read;
     void *buf;
 
-    file = fopen(MIXER_XML_PATH, "r");
+    file = fopen(mixer_paths_xml, "r");
     if (!file) {
         printf("Oooft, cannae open xml file\n");
         goto errr;
@@ -340,13 +342,21 @@ errr:
 int tinyroute_main(struct audio_tool_config *config, int argc, char **argv)
 {
 
+		// 0. check for filename on cmd line rather than default
+		if (argc > 1) {
+			printf("Opening Mixer Paths XML %s\n", argv[1]);
+			mixer_paths_xml = argv[1];
+		} else {
+			printf("Opening default file %s\n", MIXER_XML_PATH);
+		}
+
     // 1. allocate audio_route and setup state
     struct audio_route *ar = setup_audio_route(config);
     struct config_parse_state state;
     memset(&state, 0, sizeof(state));
     state.ar = ar;
-	// setup top level initial settings path
-	state.path = path_create(ar, TOP_LEVEL_XML_SETTINGS);
+		// setup top level initial settings path
+		state.path = path_create(ar, TOP_LEVEL_XML_SETTINGS);
 
     // 2. parse XML
     parse_xml(&state);

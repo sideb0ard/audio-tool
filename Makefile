@@ -55,7 +55,6 @@ LIB_OBJECTS = \
 	defaults.o \
 	alsa-control.o \
 	config_cmd.o \
-	xparse.o \
 	tinyroute.o \
 
 MODULES = \

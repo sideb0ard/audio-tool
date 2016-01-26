@@ -11,6 +11,7 @@ Commands:
 	save - save current mixer state to a file
 	restore - restore mixer state from a file
 	defaults - put card in audio-tool's 'default' state
+	route <filename> - output xml routes for a given usecase
 "
 
 section "Options"
